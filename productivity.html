@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superseats · Admin Productivity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1d2440;        /* deep indigo — structure, headings */
+    --ink-soft:#5a6280;   /* muted indigo — secondary text */
+    --paper:#f7f6f2;      /* warm off-white background */
+    --card:#ffffff;
+    --line:#e4e2da;
+    --amber:#e8a13a;      /* on-shift / active accent */
+    --amber-deep:#b97a1a;
+    --green:#2e7d5b;      /* running timer */
+    --red:#b3452f;        /* stop / end shift */
+    --radius:10px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3,.brand{font-family:'Archivo',sans-serif}
+  .mono{font-family:'IBM Plex Mono',monospace}
+
+  /* ---------- header ---------- */
+  header{
+    background:var(--ink);
+    color:#fff;
+    padding:0.9rem 1.4rem;
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:0.6rem;
+  }
+  .brand{font-weight:800;font-size:1.05rem;letter-spacing:0.04em}
+  .brand span{color:var(--amber)}
+  nav{display:flex;gap:0.4rem;flex-wrap:wrap}
+  nav button{
+    background:transparent;border:1px solid rgba(255,255,255,0.25);
+    color:#fff;padding:0.45rem 0.95rem;border-radius:999px;
+    font:inherit;font-size:0.85rem;cursor:pointer;
+  }
+  nav button.active{background:var(--amber);border-color:var(--amber);color:var(--ink);font-weight:600}
+  nav button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+  main{max-width:960px;margin:0 auto;padding:1.6rem 1.2rem 4rem}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);padding:1.3rem;margin-bottom:1.1rem;
+  }
+  .muted{color:var(--ink-soft);font-size:0.88rem}
+  .hidden{display:none !important}
+
+  /* ---------- login ---------- */
+  .login-wrap{max-width:400px;margin:2.5rem auto}
+  .login-wrap h2{margin-bottom:0.35rem}
+  .field{margin-top:1rem}
+  .field label{display:block;font-size:0.82rem;font-weight:600;margin-bottom:0.35rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.05em}
+  .field select,.field input{
+    width:100%;padding:0.65rem 0.75rem;border:1px solid var(--line);
+    border-radius:8px;font:inherit;background:#fff;
+  }
+  .field select:focus-visible,.field input:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+  .btn{
+    display:inline-block;border:none;border-radius:8px;cursor:pointer;
+    font:inherit;font-weight:600;padding:0.7rem 1.2rem;
+  }
+  .btn-primary{background:var(--ink);color:#fff;width:100%;margin-top:1.2rem}
+  .btn-primary:hover{background:#2a3357}
+  .error-msg{color:var(--red);font-size:0.85rem;margin-top:0.7rem;min-height:1.1em}
+
+  /* ---------- shift bar ---------- */
+  .shift-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:0.9rem;
+  }
+  .shift-status{display:flex;align-items:center;gap:0.7rem}
+  .dot{width:12px;height:12px;border-radius:50%;background:#c9c6bc;flex-shrink:0}
+  .dot.on{background:var(--amber);box-shadow:0 0 0 4px rgba(232,161,58,0.25)}
+  .shift-label{font-weight:700}
+  .switch{
+    position:relative;width:58px;height:30px;border-radius:999px;
+    background:#d8d5cc;border:none;cursor:pointer;transition:background 0.15s;
+  }
+  .switch::after{
+    content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;
+    border-radius:50%;background:#fff;transition:left 0.15s;
+    box-shadow:0 1px 3px rgba(0,0,0,0.25);
+  }
+  .switch[aria-checked="true"]{background:var(--amber)}
+  .switch[aria-checked="true"]::after{left:31px}
+  .switch:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  .day-total{
+    text-align:right;
+  }
+  .day-total .mono{font-size:1.5rem;font-weight:600}
+
+  /* ---------- task list ---------- */
+  .task-list{display:flex;flex-direction:column;gap:0.45rem;margin-top:0.9rem}
+  .task-row{
+    display:flex;align-items:center;justify-content:space-between;gap:0.8rem;
+    background:#fff;border:1px solid var(--line);border-radius:8px;
+    padding:0.6rem 0.85rem;
+  }
+  .task-row.running{border-color:var(--amber);background:#fdf6ea}
+  .task-name{font-size:0.92rem;font-weight:500}
+  .task-side{display:flex;align-items:center;gap:0.8rem}
+  .task-time{font-size:0.92rem;color:var(--ink-soft);min-width:88px;text-align:right}
+  .task-row.running .task-time{color:var(--amber-deep);font-weight:600}
+  .tasks-disabled{opacity:0.45;pointer-events:none}
+
+  /* ---------- dashboard ---------- */
+  .filters{display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;margin-bottom:1.1rem}
+  .chip{
+    background:#fff;border:1px solid var(--line);border-radius:999px;
+    padding:0.42rem 0.95rem;font:inherit;font-size:0.85rem;cursor:pointer;
+  }
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .custom-range{display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap}
+  .custom-range input{padding:0.4rem 0.5rem;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:0.85rem}
+  .range-label{font-size:0.85rem;color:var(--ink-soft);width:100%;margin-top:0.3rem}
+
+  .admin-card{cursor:pointer}
+  .admin-head{display:flex;align-items:center;justify-content:space-between;gap:0.8rem}
+  .admin-name{font-size:1.05rem;font-weight:700}
+  .admin-hours{font-size:1.35rem;font-weight:600}
+  .admin-sub{font-size:0.8rem;color:var(--ink-soft);margin-top:0.15rem}
+  .caret{transition:transform 0.15s;color:var(--ink-soft)}
+  .admin-card.open .caret{transform:rotate(90deg)}
+  .breakdown{margin-top:1rem;border-top:1px dashed var(--line);padding-top:0.9rem}
+  .breakdown h4{font-size:0.8rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-soft);margin-bottom:0.5rem}
+  table{width:100%;border-collapse:collapse;font-size:0.88rem}
+  th,td{text-align:left;padding:0.42rem 0.3rem;border-bottom:1px solid var(--line)}
+  th{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-soft);font-weight:600}
+  td.num,th.num{text-align:right;font-family:'IBM Plex Mono',monospace}
+  .empty{color:var(--ink-soft);font-size:0.88rem;padding:0.6rem 0}
+
+  .logout-row{display:flex;justify-content:flex-end;margin-bottom:0.8rem}
+  .link-btn{background:none;border:none;color:var(--ink-soft);font:inherit;font-size:0.85rem;cursor:pointer;text-decoration:underline}
+
+  @media (max-width:560px){
+    .day-total{text-align:left}
+    .admin-hours{font-size:1.1rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">SUPERSEATS <span>/ PRODUCTIVITY</span></div>
+  <nav>
+    <button id="navDash" class="active" onclick="showView('dash')">Dashboard</button>
+    <button id="navAdmin" onclick="showView('admin')">Admin Login</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ================= PUBLIC DASHBOARD ================= -->
+  <section id="viewDash">
+    <h2 style="margin-bottom:0.3rem">Team Productivity</h2>
+    <p class="muted" style="margin-bottom:1.1rem">Hours logged per admin. Public view — no login needed. Click an admin to see the task breakdown.</p>
+
+    <div class="filters" role="group" aria-label="Date range">
+      <button class="chip active" data-range="day" onclick="setRange('day',this)">Today</button>
+      <button class="chip" data-range="week" onclick="setRange('week',this)">This Week</button>
+      <button class="chip" data-range="month" onclick="setRange('month',this)">This Month</button>
+      <button class="chip" data-range="custom" onclick="setRange('custom',this)">Custom</button>
+      <div class="custom-range hidden" id="customRange">
+        <input type="date" id="fromDate" aria-label="From date">
+        <span class="muted">to</span>
+        <input type="date" id="toDate" aria-label="To date">
+        <button class="chip" onclick="applyCustom()">Apply</button>
+      </div>
+      <div class="range-label" id="rangeLabel"></div>
+    </div>
+
+    <div id="adminCards"></div>
+  </section>
+
+  <!-- ================= ADMIN LOGIN ================= -->
+  <section id="viewLogin" class="hidden">
+    <div class="card login-wrap">
+      <h2>Admin Login</h2>
+      <p class="muted">Sign in to start your shift and track tasks.</p>
+      <div class="field">
+        <label for="loginAdmin">Admin</label>
+        <select id="loginAdmin">
+          <option value="Mark">Mark</option>
+          <option value="Christian">Christian</option>
+          <option value="Cassandra">Cassandra</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="loginPass">Password</label>
+        <input type="password" id="loginPass" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="doLogin()">Sign in</button>
+      <div class="error-msg" id="loginError"></div>
+    </div>
+  </section>
+
+  <!-- ================= ADMIN WORKSPACE ================= -->
+  <section id="viewAdmin" class="hidden">
+    <div class="logout-row">
+      <button class="link-btn" onclick="doLogout()">Sign out</button>
+    </div>
+
+    <div class="card shift-bar">
+      <div class="shift-status">
+        <div class="dot" id="shiftDot"></div>
+        <div>
+          <div class="shift-label" id="shiftWho"></div>
+          <div class="muted" id="shiftState">Inactive — off shift</div>
+        </div>
+      </div>
+      <button class="switch" id="shiftSwitch" role="switch" aria-checked="false" aria-label="Toggle shift" onclick="toggleShift()"></button>
+      <div class="day-total">
+        <div class="muted">Worked today</div>
+        <div class="mono" id="todayTotal">0h 00m 00s</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:0.2rem">Daily Tasks</h3>
+      <p class="muted" id="taskHint">Go active on your shift to start tracking tasks.</p>
+      <div class="task-list" id="taskList"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:0.6rem">My Shift Log</h3>
+      <div id="myLog"></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* =====================================================
+   CONFIG — change admin passwords here
+   NOTE: this is simple client-side login for an internal
+   tool. Anyone who views the page source can read these.
+===================================================== */
+const ADMINS = {
+  "Mark":      "mark2026",
+  "Christian": "christian2026",
+  "Cassandra": "cassandra2026"
+};
+
+const TASKS = [
+  "Seller's Email",
+  "Pending listing (non-tagged)",
+  "Pending listing (tagged)",
+  "Payments",
+  "Priorities",
+  "FCF follow up",
+  "Tracking of New sales",
+  "Buyer's email",
+  "Chat Support",
+  "Price Suggestion",
+  "Payment/Order Error follow up",
+  "Phone support (buyer side)",
+  "Phone support (seller side)",
+  "Market Payments",
+  "Other Projects"
+];
+
+/* =====================================================
+   STORAGE
+   sessions: [{admin, task, start, end}]  (ms timestamps)
+   live:     { [admin]: {onShift:bool, shiftStart, task, taskStart} }
+===================================================== */
+const KEY = "ss_productivity_v1";
+function load(){
+  try{ return JSON.parse(localStorage.getItem(KEY)) || {sessions:[], live:{}}; }
+  catch(e){ return {sessions:[], live:{}}; }
+}
+function save(d){ localStorage.setItem(KEY, JSON.stringify(d)); }
+let db = load();
+
+let currentAdmin = sessionStorage.getItem("ss_admin") || null;
+let tickHandle = null;
+
+/* ---------- helpers ---------- */
+function fmt(ms){
+  const s = Math.floor(ms/1000);
+  const h = Math.floor(s/3600);
+  const m = Math.floor((s%3600)/60);
+  const sec = s%60;
+  return h + "h " + String(m).padStart(2,"0") + "m " + String(sec).padStart(2,"0") + "s";
+}
+function fmtHours(ms){
+  const h = ms/3600000;
+  return (Math.round(h*100)/100).toFixed(2);
+}
+function dateKey(ts){
+  const d = new Date(ts);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function niceDate(key){
+  const [y,m,d] = key.split("-").map(Number);
+  return new Date(y, m-1, d).toLocaleDateString(undefined, {weekday:"short", month:"short", day:"numeric", year:"numeric"});
+}
+function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x.getTime(); }
+function endOfDay(d){ const x=new Date(d); x.setHours(23,59,59,999); return x.getTime(); }
+
+/* live() returns state for current admin */
+function live(){
+  if(!db.live[currentAdmin]) db.live[currentAdmin] = {onShift:false, shiftStart:null, task:null, taskStart:null};
+  return db.live[currentAdmin];
+}
+
+/* =====================================================
+   VIEWS
+===================================================== */
+function showView(which){
+  document.getElementById("viewDash").classList.toggle("hidden", which!=="dash");
+  document.getElementById("navDash").classList.toggle("active", which==="dash");
+  document.getElementById("navAdmin").classList.toggle("active", which!=="dash");
+
+  const loggedIn = !!currentAdmin;
+  document.getElementById("viewLogin").classList.toggle("hidden", which!=="admin" || loggedIn);
+  document.getElementById("viewAdmin").classList.toggle("hidden", which!=="admin" || !loggedIn);
+
+  if(which==="dash"){ renderDashboard(); }
+  if(which==="admin" && loggedIn){ renderAdmin(); }
+}
+
+/* =====================================================
+   LOGIN
+===================================================== */
+function doLogin(){
+  const who = document.getElementById("loginAdmin").value;
+  const pass = document.getElementById("loginPass").value;
+  const err = document.getElementById("loginError");
+  if(ADMINS[who] !== pass){
+    err.textContent = "Incorrect password for " + who + ". Try again.";
+    return;
+  }
+  err.textContent = "";
+  document.getElementById("loginPass").value = "";
+  currentAdmin = who;
+  sessionStorage.setItem("ss_admin", who);
+  showView("admin");
+}
+function doLogout(){
+  currentAdmin = null;
+  sessionStorage.removeItem("ss_admin");
+  stopTick();
+  showView("admin"); // falls back to login form
+}
+
+/* =====================================================
+   SHIFT + TASKS
+===================================================== */
+function toggleShift(){
+  const st = live();
+  const now = Date.now();
+  if(!st.onShift){
+    st.onShift = true;
+    st.shiftStart = now;
+  } else {
+    // going inactive: close any running task
+    if(st.task){
+      db.sessions.push({admin:currentAdmin, task:st.task, start:st.taskStart, end:now});
+      st.task = null; st.taskStart = null;
+    }
+    st.onShift = false;
+    st.shiftStart = null;
+  }
+  save(db);
+  renderAdmin();
+}
+
+function toggleTask(name){
+  const st = live();
+  if(!st.onShift) return;
+  const now = Date.now();
+  if(st.task === name){
+    // stop this task
+    db.sessions.push({admin:currentAdmin, task:name, start:st.taskStart, end:now});
+    st.task = null; st.taskStart = null;
+  } else {
+    // close previous task if one is running, then start new
+    if(st.task){
+      db.sessions.push({admin:currentAdmin, task:st.task, start:st.taskStart, end:now});
+    }
+    st.task = name;
+    st.taskStart = now;
+  }
+  save(db);
+  renderAdmin();
+}
+
+/* total ms for admin between [from,to], including live task */
+function totalFor(admin, from, to, byTask){
+  let total = 0;
+  const perTask = {};
+  db.sessions.forEach(s=>{
+    if(s.admin!==admin) return;
+    const a = Math.max(s.start, from), b = Math.min(s.end, to);
+    if(b>a){
+      total += (b-a);
+      perTask[s.task] = (perTask[s.task]||0) + (b-a);
+    }
+  });
+  const st = db.live[admin];
+  if(st && st.task && st.taskStart){
+    const a = Math.max(st.taskStart, from), b = Math.min(Date.now(), to);
+    if(b>a){
+      total += (b-a);
+      perTask[st.task] = (perTask[st.task]||0) + (b-a);
+    }
+  }
+  return byTask ? perTask : total;
+}
+
+/* per-day totals for admin between [from,to] -> {dateKey: ms} */
+function dailyFor(admin, from, to){
+  const days = {};
+  const add = (start, end, task)=>{
+    // split a session across midnights so each day gets its share
+    let cur = Math.max(start, from);
+    const stop = Math.min(end, to);
+    while(cur < stop){
+      const dayEnd = endOfDay(new Date(cur)) + 1;
+      const chunk = Math.min(dayEnd, stop) - cur;
+      const k = dateKey(cur);
+      days[k] = (days[k]||0) + chunk;
+      cur += chunk;
+    }
+  };
+  db.sessions.forEach(s=>{ if(s.admin===admin) add(s.start, s.end); });
+  const st = db.live[admin];
+  if(st && st.task && st.taskStart) add(st.taskStart, Date.now());
+  return days;
+}
+
+/* =====================================================
+   ADMIN VIEW RENDER
+===================================================== */
+function renderAdmin(){
+  if(!currentAdmin) return;
+  const st = live();
+  document.getElementById("shiftWho").textContent = currentAdmin;
+  document.getElementById("shiftDot").classList.toggle("on", st.onShift);
+  document.getElementById("shiftSwitch").setAttribute("aria-checked", st.onShift ? "true":"false");
+  document.getElementById("shiftState").textContent = st.onShift
+    ? "Active — on shift since " + new Date(st.shiftStart).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"})
+    : "Inactive — off shift";
+  document.getElementById("taskHint").textContent = st.onShift
+    ? "Toggle a task to start its timer. Starting a new task stops the previous one."
+    : "Go active on your shift to start tracking tasks.";
+
+  // tasks
+  const list = document.getElementById("taskList");
+  list.classList.toggle("tasks-disabled", !st.onShift);
+  const from = startOfDay(new Date()), to = endOfDay(new Date());
+  const perTask = totalFor(currentAdmin, from, to, true);
+  list.innerHTML = TASKS.map(t=>{
+    const running = st.task === t;
+    const ms = perTask[t] || 0;
+    return `<div class="task-row ${running?"running":""}">
+      <div class="task-name">${t}</div>
+      <div class="task-side">
+        <div class="task-time mono">${fmt(ms)}</div>
+        <button class="switch" role="switch" aria-checked="${running}" aria-label="Toggle ${t}" onclick="toggleTask('${t.replace(/'/g,"\\'")}')"></button>
+      </div>
+    </div>`;
+  }).join("");
+
+  // today total
+  document.getElementById("todayTotal").textContent = fmt(totalFor(currentAdmin, from, to));
+
+  // my log (last 14 days with hours)
+  const days = dailyFor(currentAdmin, Date.now()-13*86400000 > 0 ? startOfDay(new Date(Date.now()-13*86400000)) : 0, endOfDay(new Date()));
+  const keys = Object.keys(days).sort().reverse();
+  document.getElementById("myLog").innerHTML = keys.length
+    ? `<table><thead><tr><th>Date</th><th class="num">Hours</th></tr></thead><tbody>` +
+      keys.map(k=>`<tr><td>${niceDate(k)}</td><td class="num">${fmtHours(days[k])}</td></tr>`).join("") +
+      `</tbody></table>`
+    : `<div class="empty">No hours logged yet. Your daily totals will appear here.</div>`;
+
+  startTick();
+}
+
+function startTick(){
+  stopTick();
+  tickHandle = setInterval(()=>{
+    const adminVisible = !document.getElementById("viewAdmin").classList.contains("hidden");
+    const dashVisible = !document.getElementById("viewDash").classList.contains("hidden");
+    if(adminVisible && currentAdmin){
+      const st = live();
+      const from = startOfDay(new Date()), to = endOfDay(new Date());
+      document.getElementById("todayTotal").textContent = fmt(totalFor(currentAdmin, from, to));
+      if(st.task){
+        const perTask = totalFor(currentAdmin, from, to, true);
+        document.querySelectorAll(".task-row").forEach((row,i)=>{
+          const t = TASKS[i];
+          row.querySelector(".task-time").textContent = fmt(perTask[t]||0);
+        });
+      }
+    }
+    if(dashVisible){ renderDashboard(true); }
+  }, 1000);
+}
+function stopTick(){ if(tickHandle){ clearInterval(tickHandle); tickHandle = null; } }
+
+/* =====================================================
+   DASHBOARD
+===================================================== */
+let range = {type:"day", from:startOfDay(new Date()), to:endOfDay(new Date())};
+const openCards = new Set();
+
+function setRange(type, btn){
+  document.querySelectorAll(".chip[data-range]").forEach(c=>c.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("customRange").classList.toggle("hidden", type!=="custom");
+  const now = new Date();
+  if(type==="day"){ range = {type, from:startOfDay(now), to:endOfDay(now)}; }
+  if(type==="week"){
+    const d = new Date(now);
+    const dow = (d.getDay()+6)%7; // Monday = start of week
+    d.setDate(d.getDate()-dow);
+    range = {type, from:startOfDay(d), to:endOfDay(now)};
+  }
+  if(type==="month"){
+    range = {type, from:startOfDay(new Date(now.getFullYear(), now.getMonth(), 1)), to:endOfDay(now)};
+  }
+  if(type!=="custom") renderDashboard();
+}
+function applyCustom(){
+  const f = document.getElementById("fromDate").value;
+  const t = document.getElementById("toDate").value;
+  if(!f || !t) return;
+  const [fy,fm,fd] = f.split("-").map(Number);
+  const [ty,tm,td] = t.split("-").map(Number);
+  range = {type:"custom", from:startOfDay(new Date(fy,fm-1,fd)), to:endOfDay(new Date(ty,tm-1,td))};
+  renderDashboard();
+}
+
+function renderDashboard(soft){
+  const label = document.getElementById("rangeLabel");
+  label.textContent = "Showing: " + new Date(range.from).toLocaleDateString() + " — " + new Date(range.to).toLocaleDateString();
+
+  const wrap = document.getElementById("adminCards");
+  wrap.innerHTML = Object.keys(ADMINS).map(admin=>{
+    const total = totalFor(admin, range.from, range.to);
+    const st = db.live[admin];
+    const onShift = st && st.onShift;
+    const open = openCards.has(admin);
+    let breakdown = "";
+    if(open){
+      const perTask = totalFor(admin, range.from, range.to, true);
+      const rows = TASKS.filter(t=>perTask[t]).map(t=>
+        `<tr><td>${t}</td><td class="num">${fmtHours(perTask[t])}</td></tr>`).join("");
+      const days = dailyFor(admin, range.from, range.to);
+      const dayKeys = Object.keys(days).sort().reverse();
+      const dayRows = dayKeys.map(k=>
+        `<tr><td>${niceDate(k)}</td><td class="num">${fmtHours(days[k])}</td></tr>`).join("");
+      breakdown = `<div class="breakdown">
+        <h4>By task (hours)</h4>
+        ${rows ? `<table><tbody>${rows}</tbody></table>` : `<div class="empty">No task time in this range.</div>`}
+        <h4 style="margin-top:1rem">By day (hours)</h4>
+        ${dayRows ? `<table><tbody>${dayRows}</tbody></table>` : `<div class="empty">No days logged in this range.</div>`}
+      </div>`;
+    }
+    return `<div class="card admin-card ${open?"open":""}" onclick="toggleCard('${admin}')" role="button" tabindex="0"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCard('${admin}')}">
+      <div class="admin-head">
+        <div>
+          <div class="admin-name">${admin}</div>
+          <div class="admin-sub">${onShift ? "● On shift now" : "Off shift"}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.7rem">
+          <div class="admin-hours mono">${fmtHours(total)} h</div>
+          <div class="caret">▶</div>
+        </div>
+      </div>
+      ${breakdown}
+    </div>`;
+  }).join("");
+}
+function toggleCard(admin){
+  if(openCards.has(admin)) openCards.delete(admin); else openCards.add(admin);
+  renderDashboard();
+}
+
+/* =====================================================
+   INIT
+===================================================== */
+(function init(){
+  // default custom pickers to last 7 days
+  const now = new Date(), weekAgo = new Date(Date.now()-6*86400000);
+  document.getElementById("toDate").value = dateKey(now.getTime());
+  document.getElementById("fromDate").value = dateKey(weekAgo.getTime());
+  showView("dash");
+  startTick();
+})();
+</script>
+</body>
+</html>
